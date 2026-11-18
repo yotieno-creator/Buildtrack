@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#173b32">
+  <title>BuildTrack | Building Project Management</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">BT</div>
+      <div><strong>BuildTrack</strong><small>Construction management</small></div>
+    </div>
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-link active" data-view="dashboard">▦ <span>Dashboard</span></button>
+      <button class="nav-link" data-view="projects">▤ <span>Projects</span></button>
+      <button class="nav-link" data-view="tasks">☑ <span>Tasks</span></button>
+      <button class="nav-link" data-view="expenses">◉ <span>Budget & Expenses</span></button>
+      <button class="nav-link" data-view="materials">▧ <span>Materials</span></button>
+      <button class="nav-link" data-view="reports">▥ <span>Progress Reports</span></button>
+      <button class="nav-link" data-view="compare">⇄ <span>Project Comparison</span></button>
+      <button class="nav-link" data-view="data">⇧ <span>Data Management</span></button>
+    </nav>
+    <div class="sidebar-note">
+      <strong>BuildTrack</strong>
+      <p>Planning and monitoring tool. Confirm all figures before construction decisions.</p>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Toggle navigation">☰</button>
+      <div>
+        <p class="eyebrow">BUILDING PROJECT MANAGEMENT</p>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="top-actions">
+        <span class="today" id="todayLabel"></span>
+        <button class="btn btn-primary" id="quickAddBtn">＋ New project</button>
+      </div>
+    </header>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <!-- DASHBOARD -->
+    <section class="view active" id="view-dashboard">
+      <div class="welcome-row">
+        <div>
+          <h2>Project overview</h2>
+          <p class="muted">Monitor delivery, budgets, activities and materials from one place.</p>
+        </div>
+        <button class="btn btn-outline" id="dashboardRefresh">↻ Refresh overview</button>
+      </div>
+
+      <div class="stats-grid" id="dashboardStats"></div>
+
+      <div class="dashboard-grid">
+        <article class="panel span-2">
+          <div class="panel-heading">
+            <div><h3>Budget performance</h3><p>Estimated budget compared with recorded expenditure</p></div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="budgetChart" aria-label="Budget performance chart"></canvas>
+            <p class="empty-chart" id="budgetChartEmpty">Add projects and expenses to display budget data.</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Expense categories</h3><p>Recorded expenditure breakdown</p></div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="categoryChart"></canvas>
+            <p class="empty-chart" id="categoryChartEmpty">No expenses recorded yet.</p>
+          </div>
+        </article>
+
+        <article class="panel span-2">
+          <div class="panel-heading">
+            <div><h3>Project progress</h3><p>Progress is calculated from weighted task completion.</p></div>
+            <button class="text-btn" data-go="projects">View projects →</button>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="progressChart"></canvas>
+            <p class="empty-chart" id="progressChartEmpty">Add tasks to see project progress.</p>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Task status</h3><p>Current tasks across all projects</p></div>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="taskChart"></canvas>
+            <p class="empty-chart" id="taskChartEmpty">No tasks recorded yet.</p>
+          </div>
+        </article>
+
+        <article class="panel span-2">
+          <div class="panel-heading">
+            <div><h3>Projects at a glance</h3><p>Recent project activity</p></div>
+            <button class="text-btn" data-go="projects">All projects →</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Project</th><th>Status</th><th>Progress</th><th>Budget</th><th>Expected finish</th><th></th></tr></thead>
+              <tbody id="dashboardProjects"></tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-heading">
+            <div><h3>Alerts & activity</h3><p>Items that may need attention</p></div>
+          </div>
+          <div id="dashboardAlerts" class="activity-list"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section class="view" id="view-projects">
+      <div class="section-toolbar">
+        <div><h2>Construction projects</h2><p class="muted">Create and maintain your project register.</p></div>
+        <button class="btn btn-primary" id="addProjectBtn">＋ Add project</button>
+      </div>
+      <div class="filter-bar">
+        <input id="projectSearch" placeholder="Search name, client, location…" aria-label="Search projects">
+        <select id="projectStatusFilter">
+          <option value="">All statuses</option><option>Planned</option><option>In Progress</option>
+          <option>On Hold</option><option>Completed</option><option>Cancelled</option>
+        </select>
+        <select id="projectSort">
+          <option value="name">Sort: name</option><option value="startDate">Start date</option>
+          <option value="budget">Budget</option><option value="progress">Progress</option>
+          <option value="endDate">Expected finish</option>
+        </select>
+      </div>
+      <div id="projectsList" class="project-cards"></div>
+    </section>
+
+    <!-- TASKS -->
+    <section class="view" id="view-tasks">
+      <div class="section-toolbar">
+        <div><h2>Construction tasks</h2><p class="muted">Track assignments, deadlines, priority and weighted progress.</p></div>
+        <button class="btn btn-primary" id="addTaskBtn">＋ Add task</button>
+      </div>
+      <div class="filter-bar">
+        <input id="taskSearch" placeholder="Search tasks or assignees…">
+        <select id="taskProjectFilter"><option value="">All projects</option></select>
+        <select id="taskStatusFilter">
+          <option value="">All statuses</option><option>Not Started</option><option>In Progress</option>
+          <option>Blocked</option><option>Completed</option>
+        </select>
+        <select id="taskPriorityFilter">
+          <option value="">All priorities</option><option>Low</option><option>Medium</option>
+          <option>High</option><option>Urgent</option>
+        </select>
+      </div>
+      <div class="panel table-panel"><div class="table-wrap">
+        <table>
+          <thead><tr><th>Task</th><th>Project</th><th>Assignee</th><th>Due date</th><th>Priority</th><th>Status</th><th>Progress</th><th>Actions</th></tr></thead>
+          <tbody id="tasksTable"></tbody>
+        </table>
+      </div></div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section class="view" id="view-expenses">
+      <div class="section-toolbar">
+        <div><h2>Budget & expenses</h2><p class="muted">Compare estimated budgets with recorded project expenditure.</p></div>
+        <button class="btn btn-primary" id="addExpenseBtn">＋ Record expense</button>
+      </div>
+      <div id="financeSummary" class="stats-grid compact-stats"></div>
+      <div class="filter-bar">
+        <input id="expenseSearch" placeholder="Search description or supplier…">
+        <select id="expenseProjectFilter"><option value="">All projects</option></select>
+        <select id="expenseCategoryFilter">
+          <option value="">All categories</option><option>Construction materials</option><option>Labour</option>
+          <option>Equipment hire</option><option>Transportation</option><option>Permits</option>
+          <option>Professional services</option><option>Utilities</option><option>Miscellaneous</option>
+        </select>
+        <select id="expensePaymentFilter">
+          <option value="">All payment statuses</option><option>Paid</option><option>Pending</option><option>Part Paid</option>
+        </select>
+      </div>
+      <div class="panel table-panel"><div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Project</th><th>Description</th><th>Category</th><th>Supplier / recipient</th><th>Payment</th><th>Amount</th><th>Actions</th></tr></thead>
+          <tbody id="expensesTable"></tbody>
+        </table>
+      </div></div>
+    </section>
+
+    <!-- MATERIALS -->
+    <section class="view" id="view-materials">
+      <div class="section-toolbar">
+        <div><h2>Material inventory</h2><p class="muted">Compare required quantities with purchases, usage and stock available.</p></div>
+        <button class="btn btn-primary" id="addMaterialBtn">＋ Add material</button>
+      </div>
+      <div class="filter-bar">
+        <input id="materialSearch" placeholder="Search material or supplier…">
+        <select id="materialProjectFilter"><option value="">All projects</option></select>
+        <select id="materialCategoryFilter">
+          <option value="">All categories</option><option>Aggregates</option><option>Cement</option>
+          <option>Masonry</option><option>Steel</option><option>Timber</option><option>Roofing</option>
+          <option>Finishes</option><option>Plumbing</option><option>Electrical</option><option>Other</option>
+        </select>
+      </div>
+      <div class="panel table-panel"><div class="table-wrap">
+        <table>
+          <thead><tr><th>Material</th><th>Project</th><th>Required</th><th>Purchased</th><th>Used</th><th>Available</th><th>Shortage</th><th>Purchase cost</th><th>Actions</th></tr></thead>
+          <tbody id="materialsTable"></tbody>
+        </table>
+      </div></div>
+    </section>
+
+    <!-- PROGRESS REPORTS -->
+    <section class="view" id="view-reports">
+      <div class="section-toolbar">
+        <div><h2>Progress reports</h2><p class="muted">Record site updates and print a professional project report.</p></div>
+        <button class="btn btn-primary" id="addReportBtn">＋ Add progress report</button>
+      </div>
+      <div class="filter-bar">
+        <input id="reportSearch" placeholder="Search activity or work description…">
+        <select id="reportProjectFilter"><option value="">All projects</option></select>
+      </div>
+      <div id="reportsList" class="report-list"></div>
+      <div class="panel report-builder">
+        <h3>Printable project report</h3>
+        <p class="muted">Choose a project to generate a print-ready summary.</p>
+        <div class="inline-form">
+          <select id="printProjectSelect"><option value="">Select project</option></select>
+          <button class="btn btn-primary" id="printReportBtn">Print / Save as PDF</button>
+        </div>
+        <div id="printPreview"></div>
+      </div>
+    </section>
+
+    <!-- PROJECT COMPARISON -->
+    <section class="view" id="view-compare">
+      <div class="section-toolbar">
+        <div><h2>Project comparison</h2><p class="muted">Compare budget, expenditure, progress, duration, delays and materials.</p></div>
+      </div>
+      <div class="filter-bar">
+        <select id="compareProjectA"><option value="">Select first project</option></select>
+        <select id="compareProjectB"><option value="">Select second project</option></select>
+        <button class="btn btn-primary" id="compareBtn">Compare projects</button>
+      </div>
+      <div id="comparisonResult"></div>
+    </section>
+
+    <!-- DATA MANAGEMENT -->
+    <section class="view" id="view-data">
+      <div class="section-toolbar">
+        <div><h2>Data management</h2><p class="muted">Back up or restore BuildTrack records. Data is stored in this browser only.</p></div>
+      </div>
+      <div class="data-grid">
+        <article class="panel">
+          <div class="data-icon">⇩</div><h3>Export backup</h3>
+          <p>Download all projects and related tasks, expenses, materials and progress reports as a JSON file.</p>
+          <button class="btn btn-primary" id="exportBtn">Export JSON</button>
+        </article>
+        <article class="panel">
+          <div class="data-icon">⇧</div><h3>Import backup</h3>
+          <p>Restore a previously exported BuildTrack JSON file. Importing replaces current records after confirmation.</p>
+          <label class="file-label" for="importFile">Choose JSON file</label>
+          <input type="file" id="importFile" accept="application/json,.json">
+        </article>
+        <article class="panel warning-panel">
+          <div class="data-icon">!</div><h3>Clear all records</h3>
+          <p>Deletes all BuildTrack data from this browser. Export a backup first if you may need these records.</p>
+          <button class="btn btn-danger" id="clearDataBtn">Clear all data</button>
+        </article>
+      </div>
+      <div class="panel">
+        <h3>Storage and calculation notes</h3>
+        <ul class="notes-list">
+          <li>Project progress = sum of (task completion % × task weight) ÷ sum of task weights.</li>
+          <li>Remaining budget / budget variance = estimated budget − recorded expenses.</li>
+          <li>Material stock = purchased quantity − used quantity; shortage = max(0, required quantity − stock).</li>
+          <li>localStorage does not synchronize records between browsers or devices. Use JSON export/import to transfer data.</li>
+          <li>This tool is for preliminary monitoring and does not replace certified bills of quantities or professional engineering judgment.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- REUSABLE ADD / EDIT FORM -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <div><p class="eyebrow">BUILDTRACK RECORD</p><h2 id="modalTitle">Add record</h2></div>
+      <button class="icon-btn" id="modalClose" aria-label="Close dialog">×</button>
+    </div>
+    <form id="recordForm">
+      <div id="modalFields" class="form-grid"></div>
+      <p id="formError" class="form-error" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="modalCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save record</button>
+      </div>
+    </form>
+  </section>
+</div>
+</body>
+</html>
